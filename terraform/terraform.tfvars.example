@@ -1,0 +1,129 @@
+# Terraform Variables for 4-Microservice RAG Deployment
+#
+# Copy this file to terraform.tfvars and fill in your values
+# Or use -var flags: terraform apply -var="openai_api_key=sk-..."
+
+# ============================================================================
+# GCP Configuration
+# ============================================================================
+
+# Your GCP Project ID (replace with your actual project ID)
+gcp_project_id = "YOUR_GCP_PROJECT_ID"
+
+# GCP region for Cloud Run deployment
+gcp_region = "us-central1"
+
+# ============================================================================
+# API Keys (Required - Keep Sensitive!)
+# ============================================================================
+
+# OpenAI API key for embeddings and LLM
+# Get from: https://platform.openai.com/api-keys
+# IMPORTANT: Pass via -var or environment variable, NOT in tfvars file in production!
+# openai_api_key = "sk-..."
+
+# Pinecone API key for vector search
+# Get from: https://www.pinecone.io
+# IMPORTANT: Pass via -var or environment variable, NOT in tfvars file in production!
+# pinecone_api_key = "..."
+
+# Pinecone index name (must already exist)
+pinecone_index_name = "portfolio-rag"
+
+# ============================================================================
+# Storage
+# ============================================================================
+
+# GCS bucket name for storing PDFs (must be globally unique)
+# Example: "my-org-rag-documents-12345"
+gcs_bucket_name = "your-unique-bucket-name"
+
+# ============================================================================
+# Docker Images
+# ============================================================================
+
+# Docker registry (Google Container Registry)
+docker_registry = "gcr.io"
+
+# Docker image tag for all 4 services
+# Set to specific tag (e.g., "v1.0.0") for production
+docker_image_tag = "latest"
+
+# ============================================================================
+# Service Configuration
+# ============================================================================
+
+# Prefix for all Cloud Run service names
+# Results in: rag-ingestion, rag-retrieval, rag-synthesis, rag-frontend
+service_name_prefix = "rag"
+
+# Environment name
+environment = "development"
+
+# ============================================================================
+# Cloud Run Resource Allocation (Applied to each service)
+# ============================================================================
+
+# CPU per service (1 vCPU minimum for good performance)
+# Options: "0.083", "0.166", "0.25", "0.5", "1", "2", "4", "6", "8"
+cpu_per_service = "1"
+
+# Memory per service (2GB recommended for LLM operations)
+# Options: "128Mi", "256Mi", "512Mi", "1Gi", "2Gi", "4Gi", "6Gi", "8Gi"
+memory_per_service = "2Gi"
+
+# Maximum instances per service (auto-scaling limit)
+# Each service scales independently up to this limit
+max_instances_per_service = 10
+
+# ============================================================================
+# How to Use This File
+# ============================================================================
+
+# 1. Copy this file:
+#    cp terraform.tfvars.example terraform.tfvars
+
+# 2. Edit terraform.tfvars and fill in your values (do NOT commit to git)
+
+# 3. For sensitive values, use environment variables instead:
+#    export TF_VAR_openai_api_key="sk-..."
+#    export TF_VAR_pinecone_api_key="..."
+
+# 4. Then deploy:
+#    terraform init
+#    terraform plan
+#    terraform apply
+
+# ============================================================================
+# What Gets Deployed
+# ============================================================================
+
+# With these settings, you'll deploy:
+#
+# 1. INGESTION SERVICE (Port 8000)
+#    - Receives PDF uploads
+#    - Extracts text, generates embeddings
+#    - Stores in Pinecone & GCS
+#
+# 2. RETRIEVAL SERVICE (Port 8001)
+#    - Vector similarity search
+#    - Ranking & deduplication
+#    - Called by Synthesis service
+#
+# 3. SYNTHESIS SERVICE (Port 8002)
+#    - Calls Retrieval for context
+#    - Generates LLM response
+#    - Creates citations
+#
+# 4. FRONTEND SERVICE (Port 8003)
+#    - Public-facing endpoint
+#    - SSE streaming responses
+#    - Orchestrates the pipeline
+#
+# All services:
+# - Auto-scale independently (0 to 10 instances)
+# - Use shared Secrets (OpenAI, Pinecone keys)
+# - Use shared GCS bucket for documents
+# - Log to Cloud Logging
+#
+# Estimated monthly cost: $110-180 (compute only, excludes API costs)

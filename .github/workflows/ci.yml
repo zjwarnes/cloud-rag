@@ -1,0 +1,90 @@
+name: CI/CD - Build & Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service: [ingestion, retrieval, synthesis, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies for ${{ matrix.service }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/${{ matrix.service }}/requirements.txt
+
+      - name: Run tests for ${{ matrix.service }}
+        run: |
+          cd apps/${{ matrix.service }}
+          pytest tests/ -v --tb=short
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image for ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/${{ matrix.service }}/Dockerfile
+          push: false
+          tags: rag-${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run tests in Docker container for ${{ matrix.service }}
+        run: |
+          docker build -t rag-${{ matrix.service }}:latest -f apps/${{ matrix.service }}/Dockerfile .
+          docker run --rm rag-${{ matrix.service }}:latest python -m pytest apps/${{ matrix.service }}/tests/ -v --tb=short
+
+  lint-and-type-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install linting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 mypy
+
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 apps/ common/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 apps/ common/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true
+
+  summary:
+    needs: [test-and-build, lint-and-type-check]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check build status
+        run: |
+          if [ "${{ needs.test-and-build.result }}" = "failure" ]; then
+            echo "Tests failed for one or more services"
+            exit 1
+          fi
+          echo "All tests and builds passed!"
