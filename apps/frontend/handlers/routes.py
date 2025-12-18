@@ -17,7 +17,7 @@ from typing import AsyncGenerator
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["frontend"])
 
-from config import settings
+from apps.frontend.config import settings
 
 
 async def stream_synthesis_response(
