@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/v1", tags=["synthesis"])
 metrics = get_collector("synthesis")
 
 # Import config to get settings
-from config import settings
+from apps.synthesis.config import settings
 
 
 @router.post("/synthesize", response_model=SynthesisResponse)
@@ -28,7 +28,7 @@ async def synthesize(request: SynthesisRequest) -> SynthesisResponse:
     with Timer() as timer:
         try:
             # Import here to avoid circular imports
-            from services.pipeline import SynthesisPipeline
+            from apps.synthesis.services.pipeline import SynthesisPipeline
 
             # Call retrieval service
             logger.info("Calling retrieval service")

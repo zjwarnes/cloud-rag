@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from handlers.routes import router
+from apps.retrieval.handlers.routes import router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -45,7 +45,7 @@ resource "google_cloud_run_service" "ingestion" {
           name = "OPENAI_API_KEY"
           value_from {
             secret_key_ref {
-              name = google_secret_manager_secret.openai_key.id
+              name = "${var.service_name_prefix}-openai-key"
               key  = "latest"
             }
           }
@@ -55,7 +55,7 @@ resource "google_cloud_run_service" "ingestion" {
           name = "PINECONE_API_KEY"
           value_from {
             secret_key_ref {
-              name = google_secret_manager_secret.pinecone_key.id
+              name = "${var.service_name_prefix}-pinecone-key"
               key  = "latest"
             }
           }
@@ -170,7 +170,7 @@ resource "google_cloud_run_service" "retrieval" {
           name = "OPENAI_API_KEY"
           value_from {
             secret_key_ref {
-              name = google_secret_manager_secret.openai_key.id
+              name = "${var.service_name_prefix}-openai-key"
               key  = "latest"
             }
           }
@@ -180,7 +180,7 @@ resource "google_cloud_run_service" "retrieval" {
           name = "PINECONE_API_KEY"
           value_from {
             secret_key_ref {
-              name = google_secret_manager_secret.pinecone_key.id
+              name = "${var.service_name_prefix}-pinecone-key"
               key  = "latest"
             }
           }
@@ -292,7 +292,7 @@ resource "google_cloud_run_service" "synthesis" {
           name = "OPENAI_API_KEY"
           value_from {
             secret_key_ref {
-              name = google_secret_manager_secret.openai_key.id
+              name = "${var.service_name_prefix}-openai-key"
               key  = "latest"
             }
           }
@@ -302,7 +302,7 @@ resource "google_cloud_run_service" "synthesis" {
           name = "PINECONE_API_KEY"
           value_from {
             secret_key_ref {
-              name = google_secret_manager_secret.pinecone_key.id
+              name = "${var.service_name_prefix}-pinecone-key"
               key  = "latest"
             }
           }
@@ -319,7 +319,7 @@ resource "google_cloud_run_service" "synthesis" {
       service_account_name = google_service_account.rag_synthesis.email
 
       # Moderate timeout for LLM generation
-      timeout_seconds = 60
+      timeout_seconds = 120
     }
 
     metadata {

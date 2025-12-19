@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from common.models import RetrievalRequest, RetrievalResult
 from common.metrics import get_collector, Timer
-from services.pipeline import RetrievalPipeline
+from apps.retrieval.services.pipeline import RetrievalPipeline
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["retrieval"])

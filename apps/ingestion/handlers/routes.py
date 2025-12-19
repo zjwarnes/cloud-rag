@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from common.models import IngestRequest, IngestResponse
 from common.metrics import get_collector, Timer
 import tempfile
-from services.pipeline import IngestionPipeline
+from apps.ingestion.services.pipeline import IngestionPipeline
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["ingest"])
