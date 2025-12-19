@@ -3,6 +3,14 @@
 # This file defines 4 independent Cloud Run services that can scale independently.
 # Each service has its own configuration, environment variables, and IAM permissions.
 
+# Local variables for service URLs to avoid circular dependencies
+locals {
+  ingestion_url = "https://rag-ingestion-zacjn32eya-uc.a.run.app"
+  retrieval_url = "https://rag-retrieval-zacjn32eya-uc.a.run.app"
+  synthesis_url = "https://rag-synthesis-zacjn32eya-uc.a.run.app"
+  frontend_url  = "https://rag-frontend-zacjn32eya-uc.a.run.app"
+}
+
 # ============================================================================
 # 1. INGESTION SERVICE (Port 8000)
 # ============================================================================
@@ -100,6 +108,22 @@ resource "google_cloud_run_service" "ingestion" {
 resource "google_cloud_run_service_iam_member" "ingestion_public" {
   service  = google_cloud_run_service.ingestion.name
   location = google_cloud_run_service.ingestion.location
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+# Allow public access to retrieval service (temporary for testing)
+resource "google_cloud_run_service_iam_member" "retrieval_public" {
+  service  = google_cloud_run_service.retrieval.name
+  location = google_cloud_run_service.retrieval.location
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+# Allow public access to synthesis service (temporary for testing)
+resource "google_cloud_run_service_iam_member" "synthesis_public" {
+  service  = google_cloud_run_service.synthesis.name
+  location = google_cloud_run_service.synthesis.location
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
@@ -285,7 +309,7 @@ resource "google_cloud_run_service" "synthesis" {
         # Internal service-to-service URL for Retrieval
         env {
           name  = "RETRIEVAL_SERVICE_URL"
-          value = "http://${google_cloud_run_service.retrieval.name}.run.app"
+          value = local.retrieval_url
         }
 
         env {
@@ -402,7 +426,7 @@ resource "google_cloud_run_service" "frontend" {
         # Internal service-to-service URL for Synthesis
         env {
           name  = "SYNTHESIS_SERVICE_URL"
-          value = "http://${google_cloud_run_service.synthesis.name}.run.app"
+          value = local.synthesis_url
         }
 
         resources {
@@ -439,6 +463,14 @@ resource "google_cloud_run_service_iam_member" "frontend_public" {
   location = google_cloud_run_service.frontend.location
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+# Allow frontend to invoke synthesis service
+resource "google_cloud_run_service_iam_member" "frontend_to_synthesis" {
+  service  = google_cloud_run_service.synthesis.name
+  location = google_cloud_run_service.synthesis.location
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.rag_frontend.email}"
 }
 
 # Service account for frontend

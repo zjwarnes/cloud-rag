@@ -4,6 +4,7 @@ Shared configuration for all apps.
 
 from functools import lru_cache
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import Optional
 
 
@@ -60,15 +61,27 @@ class SynthesisSettings(CommonSettings):
     temperature: float = 0.7
 
     # Service URLs (for calling other services)
-    retrieval_service_url: str = "http://localhost:8001"
+    retrieval_service_url: str = Field(
+        default="http://localhost:8001", alias="RETRIEVAL_SERVICE_URL"
+    )
+
+    class Config(CommonSettings.Config):
+        case_sensitive = False
+        populate_by_name = True
 
 
 class FrontendSettings(CommonSettings):
     """Frontend app specific settings."""
 
     # Service URLs
-    synthesis_service_url: str = "http://localhost:8002"
+    synthesis_service_url: str = Field(
+        default="http://localhost:8002", alias="SYNTHESIS_SERVICE_URL"
+    )
     streaming_buffer_size: int = 1024
+
+    class Config(CommonSettings.Config):
+        case_sensitive = False
+        populate_by_name = True
 
 
 # Cached getters for each app
