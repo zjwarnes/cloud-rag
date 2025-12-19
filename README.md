@@ -1,481 +1,379 @@
-# RAG API - Modular Microservices Architecture on GCP
+# Cloud RAG - Production-Grade Retrieval-Augmented Generation System
 
-A portfolio project demonstrating a production-grade Retrieval-Augmented Generation (RAG) system built as 4 independent microservices using FastAPI, Pinecone, and GCP Cloud Run.
+A comprehensive Retrieval-Augmented Generation (RAG) system built as 4 independent microservices using FastAPI, Pinecone, and Google Cloud Run. Designed for production deployments with enterprise-grade features including distributed processing, cost tracking, and comprehensive monitoring.
 
-## Architecture Overview
+## System Architecture
 
 ```
-┌──────────────┐
-│   Frontend   │ (Port 8003)
-│ (SSE Stream) │
-└──────┬───────┘
-       │ REST
-       ▼
-┌────────────────┐      ┌──────────────┐
-│   Synthesis    │◄────►│   Retrieval  │ (Port 8001)
-│ (Port 8002)    │      │              │
-│ LLM + Prompts  │      │ Vector Search│
-└──────┬─────────┘      └──────┬───────┘
-       │                       │
-       └───────────┬───────────┘
-                   ▼
-           ┌───────────────┐
-           │   Pinecone    │
-           │  (Vector DB)  │
-           └───────────────┘
+                          ┌─────────────────┐
+                          │    Frontend     │
+                          │  (Port 8003)    │
+                          │  SSE Streaming  │
+                          └────────┬────────┘
+                                   │
+                                   ▼
+                    ┌──────────────────────────┐
+                    │      Synthesis           │
+                    │   LLM Response Gen       │
+                    │      (Port 8002)         │
+                    └──────────┬───────────────┘
+                               │
+                               ▼
+        ┌──────────────────────────────────────────┐
+        │            Retrieval Service             │
+        │      Vector Search & Ranking             │
+        │           (Port 8001)                    │
+        └──────────────┬──────────────────────────┘
+                       │
+                       ▼
+        ┌──────────────────────────────────────────┐
+        │           Pinecone Vector DB             │
+        │      (Embeddings & Metadata)             │
+        └──────────────────────────────────────────┘
 
-┌──────────────────┐
-│   Ingestion      │ (Port 8000)
-│ PDF → Chunks →   │
-│ Embeddings →     │
-│ Pinecone Storage │
-└──────────────────┘
-
-          All services monitored in Cloud Logging
+┌──────────────────────────────────────────────────┐
+│         Ingestion Service (Port 8000)            │
+│    PDF → Chunks → Embeddings → Vector Storage   │
+└──────────────────────────────────────────────────┘
 ```
 
-## Key Features
+## Core Features
 
-✅ **Modular Architecture** - 4 independent microservices, each independently deployable
-✅ **Streaming Responses** - Server-Sent Events (SSE) for real-time token streaming
-✅ **Source-Backed Answers** - Citations with document metadata and page numbers
-✅ **Type-Safe Communication** - Pydantic models across all service boundaries
-✅ **Fully Testable** - 100% mockable dependencies (no API keys needed for tests)
-✅ **Cost Optimization** - Embedding batching, token counting, cost tracking
-✅ **Infrastructure-as-Code** - Terraform for reproducible 4-service deployment
-✅ **Production Ready** - Docker images, error handling, comprehensive logging
+- **Modular Microservices Architecture** - 4 independently deployable FastAPI services
+- **Real-Time Streaming** - Server-Sent Events (SSE) for progressive response streaming
+- **Citation-Backed Answers** - Source references with document metadata and page numbers
+- **Type-Safe APIs** - Pydantic models for all inter-service communication
+- **Production Ready** - Docker containerization, comprehensive error handling, structured logging
+- **Cost Tracking** - Real-time token counting, embedding cost calculation, usage monitoring
+- **Infrastructure as Code** - Terraform automation for GCP Cloud Run deployment
+- **Comprehensive Testing** - Full test coverage with mocked dependencies (no API keys required)
 
 ## Project Structure
 
 ```
-gcp-rag/
-├── app/
-│   ├── api/
-│   │   ├── ingest.py         # PDF ingestion with embeddings
-│   │   ├── query.py          # Streaming RAG query endpoint
-│   │   └── health.py         # Health check with metrics
-│   ├── rag/
-│   │   ├── retriever.py      # Vector search and ranking
-│   │   ├── prompt.py         # Prompt templates and formatting
-│   │   ├── streaming.py      # LLM streaming and embeddings
-│   │   └── citations.py      # Citation extraction and formatting
-│   ├── models/
-│   │   └── schema.py         # Pydantic request/response models
-│   ├── utils/
-│   │   ├── text_processing.py  # Text chunking and normalization
-│   │   ├── metrics.py        # Query metrics collection
-│   │   └── __init__.py
-│   ├── config.py             # Configuration management
-│   ├── logging_config.py     # Logging setup
-│   └── main.py               # FastAPI app entry point
-├── terraform/
-│   ├── main.tf              # Provider and version
-│   ├── variables.tf         # Input variables
-│   ├── outputs.tf           # Output values
-│   ├── cloud_run.tf         # Cloud Run service
-│   ├── secrets.tf           # Secret Manager
-│   ├── storage.tf           # GCS bucket
-│   ├── networking.tf        # VPC and firewall
-│   ├── monitoring.tf        # Cloud Logging and Monitoring
+cloud-rag/
+├── apps/
+│   ├── frontend/                    # Frontend service (SSE streaming)
+│   │   ├── handlers/
+│   │   │   ├── __init__.py
+│   │   │   └── routes.py           # Query endpoint, health checks
+│   │   ├── app.py                  # FastAPI app
+│   │   ├── config.py               # Service configuration
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── tests/                  # Comprehensive test suite
+│   │
+│   ├── ingestion/                  # Ingestion service (PDF upload & embedding)
+│   │   ├── handlers/
+│   │   │   ├── __init__.py
+│   │   │   └── routes.py           # Ingest endpoint
+│   │   ├── services/
+│   │   │   └── pipeline.py         # PDF extraction, chunking, embeddings
+│   │   ├── app.py                  # FastAPI app
+│   │   ├── config.py               # Service configuration
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── tests/                  # Full test coverage
+│   │
+│   ├── retrieval/                  # Retrieval service (vector search)
+│   │   ├── handlers/
+│   │   │   └── routes.py           # Retrieve endpoint
+│   │   ├── services/
+│   │   │   └── pipeline.py         # Vector search, ranking, deduplication
+│   │   ├── app.py
+│   │   ├── config.py
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── tests/
+│   │
+│   └── synthesis/                  # Synthesis service (LLM generation)
+│       ├── handlers/
+│       │   └── routes.py           # Synthesize endpoint
+│       ├── services/
+│       │   └── pipeline.py         # Retrieval + LLM orchestration
+│       ├── app.py
+│       ├── config.py
+│       ├── Dockerfile
+│       ├── requirements.txt
+│       └── tests/
+│
+├── common/                         # Shared code across services
+│   ├── __init__.py
+│   ├── config.py                  # Shared configuration
+│   ├── models.py                  # Pydantic models (all services)
+│   ├── metrics.py                 # Metrics collection
+│   └── utils.py                   # Utility functions
+│
+├── terraform/                     # Infrastructure as Code
+│   ├── main.tf
+│   ├── services.tf                # Cloud Run services
+│   ├── variables.tf
+│   ├── outputs.tf
+│   ├── monitoring.tf              # Cloud Logging & Monitoring
+│   ├── networking.tf              # VPC & Firewall
+│   ├── storage.tf                 # GCS buckets
+│   ├── secrets.tf                 # Secret Manager
 │   └── terraform.tfvars.example
-├── scripts/
-│   ├── setup_local.sh       # Local development setup
-│   ├── test_api.sh          # API testing script
-│   └── deploy_cloud_run.sh  # Cloud Run deployment
-├── .env.example             # Environment variables template
-├── Dockerfile               # Container image definition
-├── requirements.txt         # Python dependencies
+│
+├── Dockerfile                     # Root container setup
+├── requirements.txt               # Root dependencies
 └── README.md
 ```
 
-## Local Development Setup
+## Quick Start - Local Development
 
 ### Prerequisites
 
 - Python 3.11+
-- pip/venv
-- Docker (for containerization)
-- Terraform (for GCP deployment)
-- gcloud CLI (for GCP interactions)
+- OpenAI API key (from https://platform.openai.com)
+- Pinecone API key (from https://pinecone.io)
 
-### 1. Initial Setup
+### Setup
 
+1. **Clone and install dependencies:**
 ```bash
-chmod +x scripts/setup_local.sh
-./scripts/setup_local.sh
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install all service dependencies
+pip install -r requirements.txt
+for dir in apps/ingestion apps/retrieval apps/synthesis apps/frontend; do
+  pip install -r $dir/requirements.txt
+done
 ```
 
-This will:
-- Create Python virtual environment
-- Install dependencies
-- Create `.env` file from template
-
-### 2. Configure Environment
-
-Edit `.env` with your API keys:
-
+2. **Set up environment variables:**
 ```bash
-cp .env.example .env
-# Edit .env with actual values
+# Create .env files
+for dir in apps/ingestion apps/retrieval apps/synthesis apps/frontend; do
+  cat > $dir/.env << ENVFILE
+ENVIRONMENT=development
+OPENAI_API_KEY=your_openai_key_here
+PINECONE_API_KEY=your_pinecone_key_here
+ENVFILE
+done
+
+# Additional config for synthesis and frontend
+echo "RETRIEVAL_SERVICE_URL=http://localhost:8001" >> apps/synthesis/.env
+echo "SYNTHESIS_SERVICE_URL=http://localhost:8002" >> apps/frontend/.env
 ```
 
-Required keys:
-- `OPENAI_API_KEY` - Get from [OpenAI dashboard](https://platform.openai.com/api-keys)
-- `PINECONE_API_KEY` - Get from [Pinecone console](https://app.pinecone.io)
-- `GCS_BUCKET_NAME` - Create in GCP or use existing
-- `GCP_PROJECT_ID` - Your GCP project ID
-
-### 3. Run Local Development Server
+3. **Start all services in separate terminals:**
 
 ```bash
-source venv/bin/activate
-python -m uvicorn app.main:app --reload
+# Terminal 1: Ingestion (Port 8000)
+cd apps/ingestion && uvicorn app:app --port 8000
+
+# Terminal 2: Retrieval (Port 8001)
+cd apps/retrieval && uvicorn app:app --port 8001
+
+# Terminal 3: Synthesis (Port 8002)
+cd apps/synthesis && uvicorn app:app --port 8002
+
+# Terminal 4: Frontend (Port 8003)
+cd apps/frontend && uvicorn app:app --port 8003
 ```
 
-Server starts on `http://localhost:8000`
+### Testing the System
 
-API Documentation: `http://localhost:8000/docs`
-
-## Testing
-
-### Health Check
-
+**Health Checks:**
 ```bash
-curl http://localhost:8000/api/v1/health | jq .
+curl http://localhost:8000/api/v1/health
+curl http://localhost:8001/api/v1/health
+curl http://localhost:8002/api/v1/health
+curl http://localhost:8003/api/v1/health
 ```
 
-### Ingest a PDF
-
+**Upload a Document:**
 ```bash
-curl -X POST -F "file=@sample.pdf" \
+curl -X POST -F "file=@document.pdf" \
   http://localhost:8000/api/v1/ingest
 ```
 
-This returns Server-Sent Events with progress:
-- `progress` - Extraction, cleaning, chunking stages
-- `complete` - Final statistics
+**Query the System (SSE Streaming):**
+```bash
+curl -N -X POST http://localhost:8003/api/v1/query \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"Your question here"}'
+```
 
-### Query with Streaming
+**Expected Response:**
+```
+event: answer
+data: {"text":"Based on the documents..."}
+
+event: citation
+data: {"chunk_id":"...", "doc_id":"...", "page":1, "text_preview":"..."}
+
+event: done
+data: {"latency_ms":2500, "cost":0.025, "tokens":450}
+```
+
+### Run Tests
+
+Each service has comprehensive tests with mocked dependencies:
 
 ```bash
-curl -N -X POST http://localhost:8000/api/v1/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "What is the main topic?",
-    "user_id": "test-user",
-    "top_k": 5
-  }'
+# Test all services
+for dir in apps/ingestion apps/retrieval apps/synthesis apps/frontend; do
+  echo "Testing $dir..."
+  (cd $dir && pytest tests/ -v)
+done
 ```
 
-Response streams as SSE events:
-- `token` - Answer text (incremental)
-- `citation` - Source document reference
-- `done` - End of stream
+## Service Endpoints
 
-### Using Test Script
+### Ingestion Service (Port 8000)
+- **POST** `/api/v1/ingest` - Upload and process PDF documents
+- **GET** `/api/v1/health` - Health check
 
-```bash
-chmod +x scripts/test_api.sh
-./scripts/test_api.sh
-```
+### Retrieval Service (Port 8001)
+- **POST** `/api/v1/retrieve` - Search for relevant chunks
+- **GET** `/api/v1/health` - Health check
 
-## Cost Optimization
+### Synthesis Service (Port 8002)
+- **POST** `/api/v1/synthesize` - Generate LLM response with citations
+- **GET** `/api/v1/health` - Health check
 
-### 1. Embedding Batching
+### Frontend Service (Port 8003)
+- **POST** `/api/v1/query` - Streaming endpoint (SSE)
+- **GET** `/api/v1/health` - Health check
 
-Embeddings are batched (default: 20 texts per batch) to reduce API calls:
-- Single request ≈ 1 embedding call per document
-- Batched ≈ N documents in ⌈N/20⌉ calls
-
-```python
-# In app/rag/streaming.py
-embeddings, tokens = embedding_client.embed_texts(texts, use_batch=True)
-```
-
-### 2. Token Counting
-
-Rough token estimation (1 token ≈ 4 characters) for cost tracking without external libraries:
-
-```python
-from app.utils.text_processing import estimate_tokens, estimate_embedding_cost
-tokens = estimate_tokens(text)
-cost = estimate_embedding_cost(tokens)
-```
-
-### 3. Context Windowing
-
-Limit context to token budget to reduce LLM input:
-- Default: 2000 tokens max per query
-- Configurable via `CONTEXT_BUDGET_TOKENS`
-
-### 4. Cost Estimates (as of Jan 2025)
-
-**Embeddings:**
-- `text-embedding-3-small`: $0.02 per 1M tokens (~$0.00001 per query)
-- `text-embedding-3-large`: $0.13 per 1M tokens
-
-**LLM (GPT-4 Turbo):**
-- Input: $10 per 1M tokens
-- Output: $30 per 1M tokens
-- ~1000 input tokens + 500 output tokens ≈ $0.02 per query
-
-**Expected Test Cost (100 queries):**
-- Embeddings: ~$0.001
-- LLM: ~$2.00
-- **Total: ~$2-3 USD**
-
-## Evaluation Metrics
-
-Metrics are logged to structured JSON for each query:
-
-```json
-{
-  "event": "query_completed",
-  "metrics": {
-    "query_id": "uuid",
-    "timestamp": "2025-01-16T12:34:56.789",
-    "question": "...",
-    "num_retrieved": 5,
-    "num_citations": 3,
-    "latency_ms": 1234.5,
-    "tokens_input": 1200,
-    "tokens_output": 450,
-    "embedding_tokens": 50,
-    "total_tokens": 1700,
-    "cost_embedding": 0.000001,
-    "cost_llm": 0.021,
-    "total_cost": 0.021001,
-    "has_context": true
-  }
-}
-```
-
-### Key Metrics
-
-| Metric | Description |
-|--------|-------------|
-| `latency_ms` | Query end-to-end latency |
-| `num_retrieved` | Chunks returned by vector search |
-| `num_citations` | Citations in final response |
-| `total_cost` | Embedding + LLM cost |
-| `has_context` | Whether retrieval found relevant docs |
-| `tokens_input/output` | LLM token usage |
-
-### Aggregated Metrics (on shutdown)
-
-```json
-{
-  "event": "metrics_summary",
-  "aggregated": {
-    "num_queries": 42,
-    "avg_latency_ms": 2145.3,
-    "p50_latency_ms": 1890,
-    "p99_latency_ms": 5234,
-    "avg_tokens_per_query": 1680,
-    "total_cost": 0.876,
-    "avg_cost_per_query": 0.0208,
-    "num_empty_contexts": 2,
-    "avg_citations_per_query": 2.3
-  }
-}
-```
-
-## GCP Deployment
+## Deployment to GCP Cloud Run
 
 ### Prerequisites
 
-```bash
-# Install gcloud CLI
-# Authenticate
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
+- Google Cloud account with billing enabled
+- Terraform installed
+- gcloud CLI configured
+- Docker installed
 
-# Enable required APIs
-gcloud services enable \
-  run.googleapis.com \
-  storage.googleapis.com \
-  secretmanager.googleapis.com \
-  logging.googleapis.com \
-  monitoring.googleapis.com \
-  artifactregistry.googleapis.com
-```
-
-### Setup Artifact Registry (for Docker images)
+### Deploy
 
 ```bash
-gcloud artifacts repositories create docker \
-  --repository-format=docker \
-  --location=us-central1
+# Set your GCP project
+export GCP_PROJECT_ID="your-project-id"
+gcloud config set project $GCP_PROJECT_ID
 
-# Configure Docker auth
-gcloud auth configure-docker us-docker.pkg.dev
+# Build and push images
+docker build -f apps/ingestion/Dockerfile -t gcr.io/$GCP_PROJECT_ID/rag-ingestion:latest .
+docker build -f apps/retrieval/Dockerfile -t gcr.io/$GCP_PROJECT_ID/rag-retrieval:latest .
+docker build -f apps/synthesis/Dockerfile -t gcr.io/$GCP_PROJECT_ID/rag-synthesis:latest .
+docker build -f apps/frontend/Dockerfile -t gcr.io/$GCP_PROJECT_ID/rag-frontend:latest .
+
+docker push gcr.io/$GCP_PROJECT_ID/rag-ingestion:latest
+docker push gcr.io/$GCP_PROJECT_ID/rag-retrieval:latest
+docker push gcr.io/$GCP_PROJECT_ID/rag-synthesis:latest
+docker push gcr.io/$GCP_PROJECT_ID/rag-frontend:latest
+
+# Deploy with Terraform
+cd terraform
+export TF_VAR_openai_api_key="your-openai-key"
+export TF_VAR_pinecone_api_key="your-pinecone-key"
+terraform apply -auto-approve
 ```
 
-### Configure Terraform
+## Technology Stack
 
-```bash
-cd terraform/
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your values
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| API Framework | FastAPI 0.104 | Async REST APIs |
+| Server | Uvicorn | ASGI server |
+| Data Validation | Pydantic 2.5 | Type-safe request/response models |
+| Vector Database | Pinecone | Semantic search over embeddings |
+| LLM | OpenAI GPT-4 | Response generation |
+| Embeddings | OpenAI Embeddings | Vector representations |
+| Cloud Platform | Google Cloud Run | Serverless deployment |
+| Infrastructure | Terraform | Infrastructure as Code |
+| Containerization | Docker | Service packaging |
+| Testing | pytest | Unit and integration tests |
+| HTTP Client | httpx | Async service-to-service calls |
+
+## Key Implementation Details
+
+### Service-to-Service Communication
+Services communicate via REST APIs using httpx for async HTTP requests:
+```python
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        f"{settings.retrieval_service_url}/api/v1/retrieve",
+        json=retrieval_request.model_dump(),
+        timeout=30.0
+    )
 ```
 
-### Deploy with Terraform
+### Type Safety
+All inter-service communication uses Pydantic models:
+- `FrontendRequest` - User query input
+- `SynthesisRequest` - Request to synthesis service
+- `RetrievalRequest` - Request to retrieval service
+- `RetrievalResult` - Chunks returned from vector search
+- `SynthesisResponse` - Final response with citations
 
-```bash
-terraform init
-terraform plan
-terraform apply
+### Cost Tracking
+Real-time cost calculation for all operations:
+- Embedding costs (OpenAI API pricing)
+- Token usage (prompt + completion)
+- Service-level cost estimation
+
+### Error Handling
+Comprehensive error handling with structured logging:
+- Validation errors (400)
+- Resource not found (404)
+- Service errors (500)
+- Timeout handling across service boundaries
+
+## Configuration
+
+Each service reads configuration from environment variables using Pydantic Settings:
+
+```python
+class IngestionSettings(CommonSettings):
+    embedding_batch_size: int = 20
+    chunk_size: int = 512
+    chunk_overlap: int = 100
+    max_file_size_mb: int = 100
 ```
 
-Or use the convenience script:
+Configuration can be overridden per environment using `.env` files or environment variables.
 
-```bash
-GCP_PROJECT_ID=my-project ./scripts/deploy_cloud_run.sh
-```
+## Monitoring and Logging
 
-### Outputs
+Services send structured logs to Google Cloud Logging:
+- Request/response logging
+- Error tracking with stack traces
+- Performance metrics (latency, tokens, costs)
+- Service health status
 
-After deployment, get the service URL:
-
-```bash
-terraform output cloud_run_service_url
-```
-
-### Monitoring
-
-**View logs:**
-```bash
-gcloud run logs read rag-api --region=us-central1
-```
-
-**View metrics:**
-- [Cloud Console > Cloud Run](https://console.cloud.google.com/run)
-- Metrics tab shows latency, request count, errors
-
-## Production Considerations
-
-### Authentication
-
-Current setup allows unauthenticated access (for testing).
-
-For production, add authentication:
-
-```hcl
-# Remove in terraform/cloud_run.tf:
-# resource "google_cloud_run_service_iam_member" "public"
-
-# Instead, use Cloud IAM or API key
-```
-
-### Scaling
-
-Adjust in `terraform.tfvars`:
-- `max_instances` - Max concurrent Cloud Run instances (default: 10)
-- `cpu` / `memory` - Per-instance resources (default: 2 CPU, 2Gi RAM)
-
-### Cost Control
-
-1. **Set billing alerts** in GCP Console
-2. **Monitor metrics** - Review avg cost per query
-3. **Optimize context window** - Reduce `CONTEXT_BUDGET_TOKENS` if needed
-4. **Use cheaper embedding model** - Switch to `text-embedding-3-small` if sufficient
-5. **Enable request caching** - Redis integration (future enhancement)
-
-### Security
-
-- API keys stored in Secret Manager
-- GCS bucket versioning enabled
-- Service account with minimal IAM roles
-- VPC network for egress control (future: private GCP connections)
+Configure logging in `common/config.py` or individual service configs.
 
 ## Troubleshooting
 
-### "No context found" responses
+### Services Not Connecting
+- Verify all 4 services are running on correct ports (8000-8003)
+- Check `.env` files have correct `SERVICE_URL` values
+- Confirm network connectivity between services
 
-1. Check Pinecone index has embeddings:
-```bash
-# From Python shell
-from pinecone import Pinecone
-pc = Pinecone(api_key="...")
-index = pc.Index("rag-index")
-print(index.describe_index_stats())
-```
+### Pinecone Errors
+- Verify `PINECONE_API_KEY` is correct
+- Check index name matches in configuration
+- Ensure Pinecone index is properly initialized
 
-2. Verify documents were ingested:
-```bash
-gcloud storage ls gs://your-bucket/
-```
+### OpenAI Errors
+- Verify `OPENAI_API_KEY` is valid and has sufficient quota
+- Check API rate limits
+- Ensure correct model names in configuration
 
-3. Check vector search:
-- Review `num_retrieved` in metrics
-- Increase `top_k` or `query_top_k`
+### Vector Dimension Mismatch
+- Verify embeddings model matches Pinecone index dimension
+- Default: text-embedding-3-small (1536 dimensions)
+- Recreate Pinecone index if models change
 
-### High latency
+## Contributing
 
-1. Check Cloud Run metrics in GCP Console
-2. Verify Pinecone performance
-3. Review context assembly - reduce `CONTEXT_BUDGET_TOKENS`
-4. Increase `max_instances` if throttled
-
-### High costs
-
-1. Review metrics - check `tokens_input/output`
-2. Reduce context window size
-3. Use cheaper embedding model (`text-embedding-3-small`)
-4. Limit `top_k` retrieval results
-5. Monitor batch ingestion - ensure batching is working
-
-## Future Enhancements
-
-- [ ] Multi-tenant complete isolation
-- [ ] Redis caching layer
-- [ ] Cross-encoder re-ranking
-- [ ] Batch ingestion API
-- [ ] Query result ranking/feedback loop
-- [ ] Advanced citation formatting (inline vs. footnotes)
-- [ ] Document versioning and updates
-- [ ] Ray for distributed embedding generation
-- [ ] Vertex AI Matching Engine as alternative
-- [ ] Cost anomaly detection alerts
-
-## Testing & Validation
-
-Create test documents to validate end-to-end:
-
-```bash
-# Generate sample PDFs (requires reportlab)
-pip install reportlab
-
-python scripts/generate_test_pdfs.py
-# Creates sample_1.pdf, sample_2.pdf, etc.
-
-# Ingest
-for pdf in sample_*.pdf; do
-  curl -X POST -F "file=@$pdf" http://localhost:8000/api/v1/ingest
-done
-
-# Query
-curl -X POST http://localhost:8000/api/v1/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What are the key points?"}'
-```
-
-## References
-
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [Pinecone Documentation](https://docs.pinecone.io/)
-- [OpenAI API](https://platform.openai.com/docs/api-reference)
-- [Google Cloud Run](https://cloud.google.com/run/docs)
-- [Terraform Google Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
+Contributions and improvements are welcome.
 
 ## License
 
-MIT
-
----
-
-**Author:** Portfolio Project (2025)
-
-**Status:** Pre-production / Testing Phase
-
-For questions or improvements, open an issue or PR.
+MIT License
